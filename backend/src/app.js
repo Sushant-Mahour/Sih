@@ -46,7 +46,7 @@ app.use('/api/v1', routes);
 // Root greeting
 app.get('/', (req, res) => {
   res.json({
-    platform: 'NER Logistics & Emergency Command System (NER-LECS)',
+    platform: 'NER Logistics & Emergency Command System (NIDAN)',
     version: '1.0.0',
     status: 'OPERATIONAL',
     apiDocs: '/api/v1/health',

@@ -2,11 +2,17 @@ import { create } from 'zustand';
 import { emergencyService } from '../services/domainServices';
 
 export const useEmergencyStore = create((set, get) => ({
-  isEmergencyActive: true,
-  emergencyTitle: 'STATE 1 MONSOON CRISIS: NH-6 & SELA CORRIDOR DEGRADATION',
-  operationalSummary: 'Emergency green corridors enforced across Assam-Meghalaya and Arunachal trunk routes. Priority clearance given to medical oxygen and life-saving pediatric consignments.',
+  isEmergencyActive: false, // Priority 8 fix: default OFF on login
+  emergencyTitle: 'REGIONAL DISASTER PROTOCOL (STANDBY)',
+  operationalSummary: 'Standard monitoring protocol. Joint Command standing by for monsoon risk escalation.',
   sitRep: '',
   loadingSitRep: false,
+  driverAcknowledgements: [
+    { driverName: 'Bikash Borah', vehicleId: 'NER-CONVOY-101', acknowledged: true, time: '14:35 IST' },
+    { driverName: 'P. Lyngdoh', vehicleId: 'NER-CONVOY-102', acknowledged: false, time: 'Pending' },
+    { driverName: 'Tsering Dorjee', vehicleId: 'NER-CONVOY-103', acknowledged: true, time: '14:38 IST' },
+    { driverName: 'Imti Jamir', vehicleId: 'NER-CONVOY-104', acknowledged: false, time: 'Pending' }
+  ],
 
   setEmergencyActive: (active) => set({ isEmergencyActive: active }),
 

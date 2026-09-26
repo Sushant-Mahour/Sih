@@ -26,11 +26,15 @@ const IncidentSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ['reported', 'verified', 'crew_dispatched', 'resolved', 'escalated_to_emergency'],
+    enum: ['reported', 'pending_verification', 'verified', 'rejected', 'need_info', 'crew_dispatched', 'resolved', 'escalated_to_emergency'],
     default: 'reported'
   },
   photoUrl: { type: String, default: null },
   photoBase64: { type: String, default: null },
+  audioDataUrl: { type: String, default: null },
+  audioDurationSec: { type: Number, default: 0 },
+  rejectionReason: { type: String, default: '' },
+  clarificationQuery: { type: String, default: '' },
   reporterRole: { type: String, default: 'field_agent' },
   reporterName: { type: String, default: 'Field Agent' },
   reporterPhone: { type: String, default: '' },

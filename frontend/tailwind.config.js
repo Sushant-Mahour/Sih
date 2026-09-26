@@ -4,56 +4,66 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
+  darkMode: ['class', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
+        'bg-base': 'var(--bg-base)',
+        'bg-subtle': 'var(--bg-subtle)',
+        'bg-elevated': 'var(--bg-elevated)',
+        'border-subtle': 'var(--border)',
+        'border-strong': 'var(--border-strong)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-muted': 'var(--text-muted)',
+        'accent': 'var(--accent)',
+        'accent-hover': 'var(--accent-hover)',
+        'accent-subtle': 'var(--accent-subtle)',
+        'success': 'var(--success)',
+        'warning': 'var(--warning)',
+        'danger': 'var(--danger)',
+        'success-bg': 'var(--success-bg)',
+        'warning-bg': 'var(--warning-bg)',
+        'danger-bg': 'var(--danger-bg)',
+        // Backwards compatibility mappings
         ner: {
-          bg: '#070b14',
-          card: '#0d1527',
-          cardHover: '#131e38',
-          border: '#1e293b',
-          borderLight: '#334155',
-          header: '#0b1329',
-          primary: '#0284c7',
-          primaryHover: '#0369a1',
-          accent: '#38bdf8',
-          safe: '#22c55e',
-          safeBg: 'rgba(34, 197, 94, 0.12)',
-          warning: '#f59e0b',
-          warningBg: 'rgba(245, 158, 11, 0.12)',
-          danger: '#ef4444',
-          dangerBg: 'rgba(239, 68, 68, 0.12)',
-          emergency: '#dc2626',
-          muted: '#94a3b8',
-          text: '#f1f5f9'
+          bg: 'var(--bg-base)',
+          card: 'var(--bg-elevated)',
+          cardHover: 'var(--bg-subtle)',
+          border: 'var(--border)',
+          borderLight: 'var(--border-strong)',
+          header: 'var(--bg-elevated)',
+          primary: 'var(--accent)',
+          primaryHover: 'var(--accent-hover)',
+          accent: 'var(--accent)',
+          safe: 'var(--success)',
+          safeBg: 'var(--success-bg)',
+          warning: 'var(--warning)',
+          warningBg: 'var(--warning-bg)',
+          danger: 'var(--danger)',
+          dangerBg: 'var(--danger-bg)',
+          emergency: 'var(--danger)',
+          muted: 'var(--text-muted)',
+          text: 'var(--text-primary)'
         }
       },
       fontFamily: {
-        sans: ['Inter', 'Outfit', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'monospace']
+      },
+      borderRadius: {
+        'sm': 'var(--radius-sm)',
+        'DEFAULT': 'var(--radius-md)',
+        'md': 'var(--radius-md)',
+        'lg': 'var(--radius-lg)',
+        'xl': 'var(--radius-xl)',
+        'full': 'var(--radius-full)'
       },
       boxShadow: {
-        'glow-primary': '0 0 20px -3px rgba(2, 132, 199, 0.4)',
-        'glow-safe': '0 0 20px -3px rgba(34, 197, 94, 0.4)',
-        'glow-warning': '0 0 20px -3px rgba(245, 158, 11, 0.4)',
-        'glow-danger': '0 0 25px -2px rgba(239, 68, 68, 0.5)',
-        'tactical-card': '0 4px 20px -2px rgba(0, 0, 0, 0.6)'
-      },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'radar-sweep': 'radarSweep 4s linear infinite',
-        'glow-pulse': 'glowPulse 2s ease-in-out infinite'
-      },
-      keyframes: {
-        radarSweep: {
-          '0%': { transform: 'rotate(0deg)' },
-          '100%': { transform: 'rotate(360deg)' }
-        },
-        glowPulse: {
-          '0%, 100%': { opacity: 0.8 },
-          '50%': { opacity: 0.3 }
-        }
+        'sm': 'var(--shadow-sm)',
+        'md': 'var(--shadow-md)',
+        'lg': 'var(--shadow-lg)',
+        'none': 'none'
       }
     },
   },

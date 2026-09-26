@@ -4,6 +4,7 @@ const Vehicle = require('../models/Vehicle');
 const Shipment = require('../models/Shipment');
 const Alert = require('../models/Alert');
 const { defaultModel, hasApiKey } = require('../config/gemini');
+const { broadcastRoadBlock, broadcastAlert: broadcastAlertSocket } = require('../sockets/liveTracking.socket');
 
 // Global in-memory emergency state
 let emergencyState = {
@@ -54,7 +55,7 @@ async function toggleEmergencyMode(req, res, next) {
     if (summary) emergencyState.operationalSummary = summary;
 
     if (emergencyState.isActive) {
-      await Alert.create({
+      const alert = await Alert.create({
         alertId: `EMG-${Date.now().toString().slice(-5)}`,
         severity: 'critical',
         scope: 'all',
@@ -64,12 +65,136 @@ async function toggleEmergencyMode(req, res, next) {
         broadcastBy: req.user?.name || 'NERHQ',
         isActive: true
       });
+      broadcastAlertSocket(alert);
     }
 
     res.status(200).json({
       success: true,
       message: `Emergency Mode is now ${emergencyState.isActive ? 'ACTIVE' : 'STANDBY'}.`,
       emergencyState
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/v1/emergency/road-block (Declare Road Block Workflow — Priority 9)
+async function declareRoadBlock(req, res, next) {
+  try {
+    const {
+      segmentId,
+      corridorName,
+      reason = 'Landslide',
+      customReason,
+      severity = 'full', // 'partial' | 'full'
+      estimatedClearanceHours = 6,
+      coordinates, // optional map click [lng, lat]
+      linkedIncidentId
+    } = req.body;
+
+    const blockageReason = customReason || reason;
+    const isFullBlock = severity === 'full';
+
+    let road = null;
+
+    if (segmentId) {
+      road = await RoadSegment.findOne({
+        $or: [{ segmentId }, { name: corridorName }]
+      });
+    }
+
+    if (!road) {
+      // Create new dynamic blockage road segment
+      const newId = segmentId || `BLK-${Date.now().toString().slice(-5)}`;
+      const coords = coordinates && coordinates.length === 2
+        ? [[coordinates[0] - 0.02, coordinates[1] - 0.02], coordinates, [coordinates[0] + 0.02, coordinates[1] + 0.02]]
+        : [[91.8933, 25.5788], [91.95, 25.62]];
+
+      road = await RoadSegment.create({
+        segmentId: newId,
+        name: corridorName || `Impassable Hazard Sector (${blockageReason})`,
+        fromNode: 'ORIGIN',
+        toNode: 'DEST',
+        distanceKm: 35,
+        baseDurationMin: 60,
+        status: isFullBlock ? 'blocked' : 'restricted',
+        isBlocked: true,
+        currentRiskScore: isFullBlock ? 98 : 75,
+        riskBand: 'high',
+        blockageReason,
+        geometry: {
+          type: 'LineString',
+          coordinates: coords
+        },
+        lastVerifiedAt: new Date()
+      });
+    } else {
+      road.isBlocked = true;
+      road.status = isFullBlock ? 'blocked' : 'restricted';
+      road.currentRiskScore = isFullBlock ? 98 : 75;
+      road.riskBand = 'high';
+      road.blockageReason = blockageReason;
+      road.lastVerifiedAt = new Date();
+      await road.save();
+    }
+
+    // Broadcast road blockage to all clients & active drivers
+    broadcastRoadBlock({
+      segmentId: road.segmentId,
+      name: road.name,
+      isBlocked: true,
+      status: road.status,
+      blockageReason,
+      severity,
+      estimatedClearanceHours
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Road blockage declared on ${road.name}. AI Routing immediately updated to avoid corridor.`,
+      data: road
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/v1/emergency/clear-block/:id
+async function clearRoadBlock(req, res, next) {
+  try {
+    const { id } = req.params;
+    const road = await RoadSegment.findOneAndUpdate(
+      { $or: [{ segmentId: id }, { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }] },
+      {
+        $set: {
+          isBlocked: false,
+          isDegraded: false,
+          status: 'clear',
+          currentRiskScore: 25,
+          riskBand: 'safe',
+          blockageReason: '',
+          lastVerifiedAt: new Date()
+        }
+      },
+      { new: true }
+    );
+
+    if (!road) {
+      return res.status(404).json({ success: false, error: 'Road segment not found.' });
+    }
+
+    // Broadcast cleared status to reopen corridor
+    broadcastRoadBlock({
+      segmentId: road.segmentId,
+      name: road.name,
+      isBlocked: false,
+      status: 'clear'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Corridor ${road.name} reopened and cleared.`,
+      data: road
     });
   } catch (err) {
     next(err);
@@ -161,5 +286,7 @@ Return in clean, authoritative Markdown format.`;
 module.exports = {
   getEmergencyStatus,
   toggleEmergencyMode,
+  declareRoadBlock,
+  clearRoadBlock,
   generateSitRep
 };

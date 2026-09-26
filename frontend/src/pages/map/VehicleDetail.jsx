@@ -2,29 +2,27 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Truck,
+  ArrowLeft,
+  Route,
   User,
   Phone,
-  Shield,
-  Gauge,
-  Thermometer,
-  Zap,
-  Navigation,
-  Route,
-  ArrowLeft,
   Package,
-  Clock,
-  Radio,
-  AlertTriangle
+  CheckCircle2,
+  AlertTriangle,
+  Navigation,
+  Compass,
+  Zap,
+  ShieldCheck,
+  Fuel,
+  Gauge
 } from 'lucide-react';
 import { PageShell } from '../../components/layout/PageShell';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { StatCard } from '../../components/ui/StatCard';
+import { Badge, StatusPill } from '../../components/ui/Badge';
 import { MapContainer } from '../../components/map/MapContainer';
 import { vehicleService } from '../../services/domainServices';
-import { formatDate } from '../../utils/formatters';
 
 export function VehicleDetail() {
   const { id } = useParams();
@@ -32,8 +30,7 @@ export function VehicleDetail() {
 
   const { data: vehicleRes, isLoading } = useQuery({
     queryKey: ['vehicle', id],
-    queryFn: () => vehicleService.getVehicleById(id),
-    refetchInterval: 3000
+    queryFn: () => vehicleService.getVehicleById(id)
   });
 
   const vehicle = vehicleRes?.data;
@@ -41,19 +38,17 @@ export function VehicleDetail() {
 
   if (isLoading) {
     return (
-      <PageShell title="Loading Vehicle Telemetry...">
-        <div className="flex justify-center items-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-500"></div>
-        </div>
+      <PageShell title="Loading Telemetry Feed…" breadcrumbs={['Dashboard', 'Live Map', id]}>
+        <div className="py-20 text-center text-text-muted">Loading convoy telemetry…</div>
       </PageShell>
     );
   }
 
   if (!vehicle) {
     return (
-      <PageShell title="Vehicle Not Found">
-        <Card className="text-center py-12 space-y-4">
-          <p className="text-slate-400">No telemetry stream available for vehicle ID: {id}</p>
+      <PageShell title="Convoy Not Found" breadcrumbs={['Dashboard', 'Live Map']}>
+        <Card className="text-center py-12 space-y-3">
+          <p className="text-text-muted">No telemetry records found for convoy ID: {id}</p>
           <Button variant="primary" onClick={() => navigate('/map')} icon={ArrowLeft}>
             Return to Fleet Map
           </Button>
@@ -62,12 +57,31 @@ export function VehicleDetail() {
     );
   }
 
+  // Calculate route crossed progress
+  const routeCoords = vehicle.routeCoordinates || vehicle.pathCoordinates || [];
+  const curCoords = vehicle.currentLocation?.coordinates || [91.8150, 25.8850];
+  let closestIdx = 0;
+  let minDistanceSq = Infinity;
+
+  routeCoords.forEach((coord, idx) => {
+    const distSq = Math.pow(coord[0] - curCoords[0], 2) + Math.pow(coord[1] - curCoords[1], 2);
+    if (distSq < minDistanceSq) {
+      minDistanceSq = distSq;
+      closestIdx = idx;
+    }
+  });
+
+  const progressPct = routeCoords.length > 1 ? Math.min(100, Math.max(10, Math.round((closestIdx / (routeCoords.length - 1)) * 100))) : 65;
+  const totalKm = 104.0;
+  const traversedKm = Number(((progressPct / 100) * totalKm).toFixed(1));
+  const remainingKm = Number((totalKm - traversedKm).toFixed(1));
+
   return (
     <PageShell
       title={`Telemetry: ${vehicle.vehicleId}`}
-      subtitle={`${vehicle.model} • ${vehicle.registrationNumber}`}
+      description={`${vehicle.model || vehicle.type} • Registration: ${vehicle.registrationNumber}`}
       breadcrumbs={['Dashboard', 'Live Map', vehicle.vehicleId]}
-      actionSlot={
+      actions={
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => navigate('/map')} icon={ArrowLeft}>
             Fleet Map
@@ -75,86 +89,108 @@ export function VehicleDetail() {
           <Button
             variant="warning"
             size="sm"
-            onClick={() => navigate(`/routes/planner?vehicleId=${vehicle.vehicleId}`)}
+            onClick={() => navigate(`/routes/planner?origin=${vehicle.activeShipment?.originDistrictId || 'AS-KAM'}&destination=${vehicle.activeShipment?.destinationDistrictId || 'ML-EKH'}`)}
             icon={Route}
           >
-            Emergency Reroute
+            Dynamic Reroute
           </Button>
         </div>
       }
     >
-      {/* Telemetry Stats Grid */}
+      {/* 4 StatCards Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
           title="Current Speed"
-          value={`${vehicle.speedKmph} km/h`}
-          subtitle={`Heading: ${vehicle.heading}°`}
-          icon={Gauge}
-          variant="primary"
+          value={`${vehicle.speedKmph || 0} km/h`}
+          subtitle={`Heading: ${vehicle.heading || 145}° SE`}
         />
         <StatCard
-          title="Altitude Level"
+          title="Barometric Altitude"
           value={`${vehicle.altitudeM || 850} m`}
           subtitle="Mountain Slope Gauge"
-          icon={Navigation}
-          variant="safe"
         />
         <StatCard
           title="Fuel Reserve"
-          value={`${vehicle.fuelLevelPct}%`}
-          subtitle="100L High-Grade Diesel"
-          icon={Zap}
-          variant="safe"
+          value={`${vehicle.fuelLevelPct || 85}%`}
+          subtitle="Diesel Payload"
+          trend={{ isPositive: true, text: 'Optimal' }}
         />
         <StatCard
           title="Engine Temperature"
-          value={`${vehicle.engineTempC}°C`}
-          subtitle="Optimal Range: 80-95°C"
-          icon={Thermometer}
-          variant={vehicle.engineTempC > 92 ? 'warning' : 'primary'}
+          value={`${vehicle.engineTempC || 84}°C`}
+          subtitle="Nominal: 80–92°C"
+          trend={{ isPositive: (vehicle.engineTempC || 84) < 90, text: 'Nominal' }}
         />
       </div>
 
-      {/* Main Grid: Map & Profile */}
+      {/* Traversed Journey Progress Banner */}
+      <Card className="p-4 bg-bg-surface border-border-subtle space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <Navigation className="w-4 h-4 text-accent" />
+            <span className="text-text-primary text-sm font-bold">
+              Highway Journey Progress: <b className="text-success">{progressPct}% Crossed</b>
+            </span>
+          </div>
+          <span className="font-mono text-text-muted">
+            <b className="text-text-primary">{traversedKm} km</b> traversed • <b className="text-text-secondary">{remainingKm} km</b> remaining to staging depot
+          </span>
+        </div>
+
+        <div className="w-full h-2.5 bg-bg-subtle rounded-full overflow-hidden border border-border-subtle">
+          <div
+            className="h-full bg-gradient-to-r from-blue-600 via-accent to-emerald-500 rounded-full transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Focused Map (8 cols) */}
-        <div className="lg:col-span-8 space-y-4">
-          <Card header="Live Coordinate Telemetry" className="p-0 overflow-hidden">
-            <MapContainer
-              center={vehicle.currentLocation?.coordinates || [91.8150, 25.8850]}
-              zoom={10}
-              vehicles={[vehicle]}
-              height="450px"
-            />
+        {/* Focused Coordinates Map (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          <Card header="GPS Pinpoint & Heading Telemetry" padding={false} className="overflow-hidden">
+            <div className="h-[440px] w-full">
+              <MapContainer
+                mode="convoys"
+                center={vehicle.currentLocation?.coordinates || [91.8150, 25.8850]}
+                vehicles={[vehicle]}
+                selectedVehicleId={vehicle.vehicleId}
+                height="100%"
+                className="rounded-none border-none"
+              />
+            </div>
           </Card>
         </div>
 
-        {/* Driver & Consignment Details (4 cols) */}
-        <div className="lg:col-span-4 space-y-4">
+        {/* Driver Profile & Active Consignment (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
           {/* Driver Card */}
           <Card header="Assigned Convoy Lead">
-            <div className="space-y-3">
+            <div className="space-y-3 text-xs">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-sky-950 border border-sky-800 flex items-center justify-center text-sky-400 font-bold text-base">
+                <div className="w-10 h-10 rounded-xl bg-accent text-white font-bold text-base flex items-center justify-center shadow-md">
                   {vehicle.driver?.name?.[0] || 'D'}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-100">{vehicle.driver?.name}</h4>
-                  <p className="text-xs text-slate-400">{vehicle.driver?.experienceYears} Yrs Mountain Driving</p>
-                  <div className="flex items-center gap-1 text-xs text-amber-400 mt-0.5">
-                    ★ {vehicle.driver?.rating || 4.9} Rating
-                  </div>
+                  <h4 className="text-sm font-bold text-text-primary">{vehicle.driver?.name}</h4>
+                  <p className="text-text-muted">{vehicle.driver?.experienceYears || 12} Years Mountain Driving Experience</p>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-800/80 space-y-2 text-xs">
-                <div className="flex items-center justify-between text-slate-300">
-                  <span className="text-slate-500">Contact:</span>
-                  <span className="font-mono text-sky-400">{vehicle.driver?.phone}</span>
+              <div className="pt-2 border-t border-border-subtle space-y-2">
+                <div className="flex items-center justify-between text-text-secondary">
+                  <span className="text-text-muted">Direct Phone:</span>
+                  <a href={`tel:${vehicle.driver?.phone}`} className="font-mono text-accent hover:underline font-semibold">
+                    {vehicle.driver?.phone}
+                  </a>
                 </div>
-                <div className="flex items-center justify-between text-slate-300">
-                  <span className="text-slate-500">License No:</span>
-                  <span className="font-mono">{vehicle.driver?.license}</span>
+                <div className="flex items-center justify-between text-text-secondary">
+                  <span className="text-text-muted">License / Badge:</span>
+                  <span className="font-mono text-text-primary">{vehicle.driver?.license || 'AS-COMM-8821'}</span>
+                </div>
+                <div className="flex items-center justify-between text-text-secondary">
+                  <span className="text-text-muted">Safety Rating:</span>
+                  <span className="font-semibold text-text-primary">★ {vehicle.driver?.rating || 4.9} / 5.0</span>
                 </div>
               </div>
             </div>
@@ -163,19 +199,17 @@ export function VehicleDetail() {
           {/* Shipment Card */}
           <Card header="Active Consignment Manifest">
             {shipment ? (
-              <div className="space-y-3">
+              <div className="space-y-3 text-xs">
                 <div className="flex items-center justify-between">
-                  <Badge variant="primary" size="sm">{shipment.cargoType}</Badge>
-                  <Badge variant={shipment.priority === 'critical' ? 'danger' : 'safe'} size="sm">
-                    {shipment.priority}
-                  </Badge>
+                  <Badge variant="primary">{shipment.cargoType}</Badge>
+                  <StatusPill status={shipment.priority === 'critical' ? 'critical' : 'in_transit'} label={shipment.priority?.toUpperCase()} />
                 </div>
-                <h4 className="text-xs font-bold text-slate-100">{shipment.title}</h4>
-                <div className="text-xs text-slate-300 space-y-1 font-mono bg-slate-950/50 p-2.5 rounded-lg">
-                  <div>Origin: <b>{shipment.originName}</b></div>
-                  <div>Dest: <b>{shipment.destinationName}</b></div>
-                  <div>Payload: <b>{shipment.weightKg} kg</b></div>
-                  <div>Temp: <b className="text-cyan-400">{shipment.currentTempC}</b></div>
+                <h4 className="font-bold text-text-primary text-sm">{shipment.title}</h4>
+                <div className="p-3 rounded-xl bg-bg-subtle border border-border-subtle space-y-1 font-mono text-text-secondary">
+                  <div>Origin: <b className="text-text-primary">{shipment.originName}</b></div>
+                  <div>Destination: <b className="text-text-primary">{shipment.destinationName}</b></div>
+                  <div>Payload Weight: <b className="text-text-primary">{shipment.weightKg} kg</b></div>
+                  <div>Temperature Target: <b className="text-accent">{shipment.tempRequirementC}</b></div>
                 </div>
                 <Button
                   variant="outline"
@@ -183,11 +217,11 @@ export function VehicleDetail() {
                   className="w-full"
                   onClick={() => navigate(`/shipments/${shipment.shipmentId}`)}
                 >
-                  View Full Consignment Chain
+                  View Consignment Details
                 </Button>
               </div>
             ) : (
-              <p className="text-xs text-slate-500 py-4 text-center">No active consignment assigned to this vehicle.</p>
+              <p className="text-xs text-text-muted py-4 text-center">No active consignment assigned to this unit.</p>
             )}
           </Card>
         </div>
@@ -195,3 +229,5 @@ export function VehicleDetail() {
     </PageShell>
   );
 }
+
+export default VehicleDetail;

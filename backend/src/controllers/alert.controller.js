@@ -1,5 +1,6 @@
 const Alert = require('../models/Alert');
 const { dispatchNotification } = require('../services/notification.service');
+const { broadcastAlert: broadcastAlertSocket } = require('../sockets/liveTracking.socket');
 
 // GET /api/v1/alerts
 async function getAlerts(req, res, next) {
@@ -85,6 +86,9 @@ async function broadcastAlert(req, res, next) {
       channels
     });
 
+    // Emit live WebSocket event
+    broadcastAlertSocket(alert);
+
     res.status(201).json({
       success: true,
       message: 'Alert broadcast dispatched across tactical network.',
@@ -96,8 +100,33 @@ async function broadcastAlert(req, res, next) {
   }
 }
 
+// PATCH /api/v1/alerts/:id/status
+async function updateAlertStatus(req, res, next) {
+  try {
+    const { isActive } = req.body;
+    const alert = await Alert.findOneAndUpdate(
+      { $or: [{ alertId: req.params.id }, { _id: req.params.id.match(/^[0-9a-fA-F]{24}$/) ? req.params.id : null }] },
+      { $set: { isActive: Boolean(isActive) } },
+      { new: true }
+    );
+
+    if (!alert) {
+      return res.status(404).json({ success: false, error: 'Alert not found.' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Alert status updated.',
+      data: alert
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getAlerts,
   getAlertById,
-  broadcastAlert
+  broadcastAlert,
+  updateAlertStatus
 };

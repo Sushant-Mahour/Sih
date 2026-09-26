@@ -1,7 +1,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { getRiskBadgeClasses } from '../../utils/riskColors';
 
 export function Badge({
   children,
@@ -12,31 +11,36 @@ export function Badge({
   ...props
 }) {
   const variants = {
-    default: 'bg-slate-800 text-slate-300 border border-slate-700',
-    primary: 'bg-sky-950/70 text-sky-400 border border-sky-800/80 shadow-[0_0_10px_rgba(56,189,248,0.2)]',
-    safe: 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/80 shadow-[0_0_10px_rgba(34,197,94,0.2)]',
-    warning: 'bg-amber-950/70 text-amber-400 border border-amber-800/80 shadow-[0_0_10px_rgba(245,158,11,0.2)]',
-    danger: 'bg-red-950/70 text-red-400 border border-red-800/80 shadow-[0_0_10px_rgba(239,68,68,0.2)]',
-    emergency: 'bg-red-600 text-white font-bold animate-pulse'
+    default: 'bg-bg-subtle text-text-secondary border border-border-subtle',
+    primary: 'bg-accent-subtle text-accent border border-accent/20',
+    safe: 'bg-success-bg text-success border border-success/30',
+    success: 'bg-success-bg text-success border border-success/30',
+    warning: 'bg-warning-bg text-warning border border-warning/30',
+    danger: 'bg-danger-bg text-danger border border-danger/30',
+    emergency: 'bg-danger text-white font-semibold',
+    neutral: 'bg-bg-subtle text-text-muted border border-border-subtle'
   };
 
   const sizes = {
-    sm: 'px-2 py-0.5 text-[10px] font-medium tracking-wide',
-    md: 'px-2.5 py-1 text-xs font-semibold tracking-wider',
-    lg: 'px-3 py-1.5 text-sm font-semibold'
+    sm: 'px-1.5 py-0.5 text-[11px] font-medium leading-none',
+    md: 'px-2 py-0.5 text-xs font-medium leading-normal',
+    lg: 'px-2.5 py-1 text-xs font-semibold'
   };
 
-  let computedStyle = variants[variant] || variants.default;
-  if (['safe', 'warning', 'danger', 'high', 'moderate', 'low'].includes(variant)) {
-    computedStyle = getRiskBadgeClasses(variant);
-  }
+  const normalizedVariant = ['low', 'safe', 'clear'].includes(variant)
+    ? 'safe'
+    : ['moderate', 'warning', 'restricted', 'caution_zone'].includes(variant)
+    ? 'warning'
+    : ['high', 'critical', 'danger', 'flooded', 'blocked'].includes(variant)
+    ? 'danger'
+    : variants[variant] ? variant : 'default';
 
   return (
     <span
       className={twMerge(
         clsx(
-          'inline-flex items-center gap-1.5 rounded-full uppercase tracking-wider',
-          computedStyle,
+          'inline-flex items-center gap-1.5 rounded-[4px] font-medium',
+          variants[normalizedVariant] || variants.default,
           sizes[size],
           className
         )
@@ -44,12 +48,42 @@ export function Badge({
       {...props}
     >
       {pulsing && (
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-current"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
-        </span>
+        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80 live-dot flex-shrink-0" />
       )}
       {children}
     </span>
   );
 }
+
+export function StatusPill({ status, label, className = '' }) {
+  const statusMap = {
+    in_transit: { variant: 'primary', text: 'In Transit', pulse: true },
+    caution_zone: { variant: 'warning', text: 'Caution Zone', pulse: false },
+    delayed: { variant: 'warning', text: 'Delayed', pulse: false },
+    idle: { variant: 'neutral', text: 'Idle / Staging', pulse: false },
+    delivered: { variant: 'success', text: 'Delivered', pulse: false },
+    rerouted: { variant: 'warning', text: 'Rerouted', pulse: false },
+    reported: { variant: 'warning', text: 'Reported', pulse: false },
+    verified: { variant: 'primary', text: 'Verified', pulse: false },
+    crew_dispatched: { variant: 'primary', text: 'Crew Dispatched', pulse: false },
+    resolved: { variant: 'success', text: 'Resolved', pulse: false },
+    clear: { variant: 'success', text: 'Clear', pulse: false },
+    flooded: { variant: 'danger', text: 'Flooded', pulse: true },
+    blocked: { variant: 'danger', text: 'Blocked', pulse: false },
+    restricted: { variant: 'warning', text: 'Restricted', pulse: false }
+  };
+
+  const config = statusMap[status] || {
+    variant: 'default',
+    text: label || status?.replace('_', ' ') || 'Unknown',
+    pulse: false
+  };
+
+  return (
+    <Badge variant={config.variant} size="sm" pulsing={config.pulse} className={className}>
+      {label || config.text}
+    </Badge>
+  );
+}
+
+export default Badge;

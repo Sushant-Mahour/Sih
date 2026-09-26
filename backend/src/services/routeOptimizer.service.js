@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const RoadSegment = require('../models/RoadSegment');
 const { calculateRouteRisk } = require('./riskEngine.service');
 const { explainRoute } = require('./gemini.service');
 const { getWeatherForCoordinates } = require('./weather.service');
@@ -24,24 +25,38 @@ function loadGeoData() {
 }
 
 /**
- * Build graph adjacency map from road segments
+ * Build graph adjacency map from road segments with dynamic database blockage overlay
  */
-function buildGraph(costMode = 'balanced') {
+async function buildGraph(costMode = 'balanced') {
   loadGeoData();
   const graph = {};
 
   if (!roadGeoJSON || !roadGeoJSON.features) return graph;
 
+  // Query active blocked road segments from DB
+  let blockedSegmentIds = new Set();
+  try {
+    const blockedFromDb = await RoadSegment.find({ isBlocked: true }, 'segmentId');
+    blockedSegmentIds = new Set(blockedFromDb.map(b => b.segmentId));
+  } catch (dbErr) {
+    console.warn('[Route Optimizer] DB road blockage query notice:', dbErr.message);
+  }
+
   roadGeoJSON.features.forEach(feat => {
     const p = feat.properties;
     const u = p.from_node;
     const v = p.to_node;
+    const segmentId = p.segment_id;
     const dist = Number(p.distance_km) || 50;
     const duration = Number(p.base_duration_min) || 60;
-    const risk = Number(p.current_risk_score || p.base_risk_score || 20);
+    const isBlocked = blockedSegmentIds.has(segmentId) || p.is_blocked || p.status === 'blocked';
+    const risk = isBlocked ? 99 : Number(p.current_risk_score || p.base_risk_score || 20);
 
     let weight = dist;
-    if (costMode === 'fastest') {
+    if (isBlocked) {
+      // Impassable corridor penalty: forces pathfinding algorithm to bypass blocked sectors
+      weight = dist * 1000 + 50000;
+    } else if (costMode === 'fastest') {
       weight = duration;
     } else if (costMode === 'safest') {
       // Exponential penalty for risk
@@ -54,73 +69,73 @@ function buildGraph(costMode = 'balanced') {
     if (!graph[v]) graph[v] = [];
 
     // Bidirectional edges
-    graph[u].push({ neighbor: v, weight, segment: feat });
-    graph[v].push({ neighbor: u, weight, segment: feat });
+    graph[u].push({ neighbor: v, weight, segment: feat, isBlocked });
+    graph[v].push({ neighbor: u, weight, segment: feat, isBlocked });
   });
 
   return graph;
 }
 
 /**
- * Dijkstra shortest path algorithm
+ * Dijkstra's shortest path algorithm
  */
 function dijkstra(graph, startNode, endNode) {
-  const distances = {};
-  const previous = {};
-  const previousEdge = {};
-  const unvisited = new Set(Object.keys(graph));
+const distances = {};
+const previous = {};
+const previousEdge = {};
+const unvisited = new Set(Object.keys(graph));
 
-  Object.keys(graph).forEach(node => {
-    distances[node] = Infinity;
+Object.keys(graph).forEach(node => {
+  distances[node] = Infinity;
+});
+distances[startNode] = 0;
+
+while (unvisited.size > 0) {
+  // Pick unvisited node with smallest distance
+  let current = null;
+  let minDist = Infinity;
+  unvisited.forEach(node => {
+    if (distances[node] < minDist) {
+      minDist = distances[node];
+      current = node;
+    }
   });
-  distances[startNode] = 0;
 
-  while (unvisited.size > 0) {
-    // Pick unvisited node with smallest distance
-    let current = null;
-    let minDist = Infinity;
-    unvisited.forEach(node => {
-      if (distances[node] < minDist) {
-        minDist = distances[node];
-        current = node;
-      }
-    });
+  if (!current || minDist === Infinity) break;
+  if (current === endNode) break;
 
-    if (!current || minDist === Infinity) break;
-    if (current === endNode) break;
+  unvisited.delete(current);
 
-    unvisited.delete(current);
-
-    const neighbors = graph[current] || [];
-    for (const edge of neighbors) {
-      if (!unvisited.has(edge.neighbor)) continue;
-      const alt = distances[current] + edge.weight;
-      if (alt < distances[edge.neighbor]) {
-        distances[edge.neighbor] = alt;
-        previous[edge.neighbor] = current;
-        previousEdge[edge.neighbor] = edge.segment;
-      }
+  const neighbors = graph[current] || [];
+  for (const edge of neighbors) {
+    if (!unvisited.has(edge.neighbor)) continue;
+    const alt = distances[current] + edge.weight;
+    if (alt < distances[edge.neighbor]) {
+      distances[edge.neighbor] = alt;
+      previous[edge.neighbor] = current;
+      previousEdge[edge.neighbor] = edge.segment;
     }
   }
+}
 
-  // Reconstruct path
-  const pathNodes = [];
-  const pathSegments = [];
-  let curr = endNode;
+// Reconstruct path
+const pathNodes = [];
+const pathSegments = [];
+let curr = endNode;
 
-  while (curr) {
-    pathNodes.unshift(curr);
-    if (previousEdge[curr]) {
-      pathSegments.unshift(previousEdge[curr]);
-    }
-    curr = previous[curr];
+while (curr) {
+  pathNodes.unshift(curr);
+  if (previousEdge[curr]) {
+    pathSegments.unshift(previousEdge[curr]);
   }
+  curr = previous[curr];
+}
 
-  if (pathNodes[0] !== startNode) {
-    return null; // No path found
-  }
+if (pathNodes[0] !== startNode) {
+  return null; // No path found
+}
 
-  return { pathNodes, pathSegments };
+return { pathNodes, pathSegments };
 }
 
 /**
@@ -148,7 +163,7 @@ async function generateRouteCandidates(originId, destinationId) {
   const candidates = [];
 
   for (const mode of modes) {
-    const graph = buildGraph(mode);
+    const graph = await buildGraph(mode);
     let result = dijkstra(graph, originId, destinationId);
 
     // If no direct graph path (e.g. same node or distant disconnected nodes), construct direct synthetic corridor

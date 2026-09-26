@@ -13,72 +13,128 @@ import {
   CheckCircle2,
   Activity,
   Layers,
-  Sparkles
+  Sparkles,
+  Sun,
+  Moon,
+  Database,
+  Building2,
+  Truck
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { useTheme } from '../../features/ThemeContext';
 
 export function Landing() {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   const states = [
     'Assam', 'Meghalaya', 'Arunachal Pradesh', 'Nagaland',
     'Manipur', 'Mizoram', 'Tripura', 'Sikkim'
   ];
 
+  const features = [
+    {
+      icon: Route,
+      title: "Bidirectional Dijkstra's Routing Engine",
+      description: 'Dual-frontier graph pathfinding with edge penalties and real-time obstacle avoidance across mountain road networks.'
+    },
+    {
+      icon: MapPin,
+      title: '3-Tier Offline Vector Map',
+      description: 'Zero-watermark static vector basemaps with sub-second coordinate transforms and fallback tile layers.'
+    },
+    {
+      icon: Database,
+      title: 'Multi-Schema Dataset Ingestion',
+      description: 'Ingest SQL dumps, CSV rosters, and JSON road hazard telemetry with instant AI situation synthesis.'
+    },
+    {
+      icon: ShieldAlert,
+      title: 'Joint Emergency & SitRep Command',
+      description: 'One-click disaster protocol escalation, green corridor enforcement, and automated military-grade SitRep reports.'
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-ner-bg text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white">
-      {/* Top Tactical Banner */}
-      <header className="h-20 tactical-glass-header px-6 md:px-12 flex items-center justify-between border-b border-slate-800/80 sticky top-0 z-40">
+    <div
+      className="min-h-screen flex flex-col transition-colors duration-200"
+      style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}
+    >
+      {/* Top Header */}
+      <header
+        className="h-16 px-6 md:px-12 flex items-center justify-between border-b sticky top-0 z-40 backdrop-blur-md"
+        style={{
+          background: 'var(--bg-surface)',
+          borderColor: 'var(--border-subtle)'
+        }}
+      >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-500 text-white shadow-glow-primary">
-            <Radio className="w-6 h-6 animate-pulse" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: 'var(--accent)' }}>
+            <Radio className="w-4 h-4" />
           </div>
           <div>
-            <h1 className="text-base md:text-lg font-black tracking-wider uppercase flex items-center gap-2 text-slate-100">
-              NER-LECS <span className="text-xs px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800 font-bold">TACTICAL</span>
+            <h1 className="text-sm font-bold tracking-tight uppercase flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              NIDAN
+              <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold" style={{ background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
+                v2.4
+              </span>
             </h1>
-            <p className="text-xs text-slate-400 font-medium">North East Logistics & Disaster Command</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Smart Logistics & Accessibility Intelligence
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg border transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+          </button>
           <Button variant="outline" size="sm" onClick={() => navigate('/login')}>
             Officer Login
           </Button>
           <Button variant="primary" size="sm" onClick={() => navigate('/dashboard')} icon={ArrowRight}>
-            Enter Command Center
+            Command Center
           </Button>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative px-6 md:px-12 py-16 md:py-24 max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center">
-        {/* Ambient Glows */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-10 right-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div className="relative text-center max-w-4xl mx-auto space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-700/80 text-xs font-semibold text-sky-400 shadow-lg">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            DEFENSE & DISASTER GRADE LOGISTICS PLATFORM ACROSS 8 NER STATES
+      <section className="px-6 md:px-12 py-16 md:py-24 max-w-6xl mx-auto w-full flex-1 flex flex-col justify-center">
+        <div className="text-center max-w-3xl mx-auto space-y-6">
+          <div
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold shadow-xs"
+            style={{
+              background: 'var(--bg-subtle)',
+              borderColor: 'var(--border-subtle)',
+              color: 'var(--accent)'
+            }}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            OPERATIONAL LOGISTICS & EMERGENCY PLATFORM FOR ALL 8 NER STATES
           </div>
 
-          <h2 className="text-3xl md:text-6xl font-extrabold tracking-tight uppercase text-slate-100 leading-tight">
-            Resilient Mountain Logistics & <span className="bg-gradient-to-r from-sky-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">Live Emergency Command</span>
+          <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight" style={{ color: 'var(--text-primary)' }}>
+            Resilient Mountain Logistics &{' '}
+            <span style={{ color: 'var(--accent)' }}>Disaster Intelligence</span>
           </h2>
 
-          <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Deterministic risk calculation, graph-based route optimization, Google Gemini multimodal AI hazard analysis, and offline PWA sync engineered for challenging Himalayan terrain.
+          <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+            Deterministic risk calculations, bidirectional shortest-path graph optimization, offline-first vector maps, and multimodal hazard analysis engineered for the North Eastern Region.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Button size="lg" variant="primary" onClick={() => navigate('/dashboard')} icon={Activity}>
-              Launch Live Dashboard
+              Launch Command Dashboard
             </Button>
-            <Button size="lg" variant="secondary" onClick={() => navigate('/map')} icon={MapPin}>
-              Inspect Live Convoys
+            <Button size="lg" variant="outline" onClick={() => navigate('/map')} icon={MapPin}>
+              Live Convoy Radar
             </Button>
             <Button size="lg" variant="danger" onClick={() => navigate('/emergency')} icon={ShieldAlert}>
               Emergency Console
@@ -86,40 +142,63 @@ export function Landing() {
           </div>
         </div>
 
-        {/* Live Operational Metrics Ticker */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-16 max-w-5xl mx-auto w-full">
-          <Card className="text-center p-4 border-slate-800/80">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Tracked Convoys</p>
-            <p className="text-2xl md:text-3xl font-mono font-black text-sky-400 mt-1">100% LIVE</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">2.5s GPS Telemetry</p>
+        {/* Operational Metrics Ticker */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-16 max-w-4xl mx-auto w-full">
+          <Card className="text-center p-4">
+            <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>FLEET TELEMETRY</p>
+            <p className="text-2xl font-mono font-bold mt-1" style={{ color: 'var(--accent)' }}>100% LIVE</p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>2.5s GPS Telemetry Stream</p>
           </Card>
-          <Card className="text-center p-4 border-slate-800/80">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Risk Engine</p>
-            <p className="text-2xl md:text-3xl font-mono font-black text-emerald-400 mt-1">DETERMINISTIC</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Rain + Slope + DEM</p>
+          <Card className="text-center p-4">
+            <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>ROUTING ENGINE</p>
+            <p className="text-2xl font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">Dijkstra's</p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Bidirectional Dual-Frontier</p>
           </Card>
-          <Card className="text-center p-4 border-slate-800/80">
-            <p className="text-[10px] uppercase font-bold text-slate-400">AI Visual Analysis</p>
-            <p className="text-2xl md:text-3xl font-mono font-black text-amber-400 mt-1">GEMINI 1.5</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Multimodal Slope Severity</p>
+          <Card className="text-center p-4">
+            <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>AI ANALYSIS</p>
+            <p className="text-2xl font-mono font-bold text-amber-600 dark:text-amber-400 mt-1">GEMINI AI</p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Multimodal Hazard Detection</p>
           </Card>
-          <Card className="text-center p-4 border-slate-800/80">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Zero Connectivity</p>
-            <p className="text-2xl md:text-3xl font-mono font-black text-cyan-400 mt-1">OFFLINE PWA</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">IndexedDB Background Sync</p>
+          <Card className="text-center p-4">
+            <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-muted)' }}>MAP ENGINE</p>
+            <p className="text-2xl font-mono font-bold text-sky-600 dark:text-sky-400 mt-1">OFFLINE</p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Zero Watermark Vector SVG</p>
           </Card>
         </div>
 
+        {/* Feature Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 max-w-4xl mx-auto w-full">
+          {features.map((f, i) => {
+            const Icon = f.icon;
+            return (
+              <Card key={i} className="p-5 flex items-start gap-4">
+                <div className="p-2.5 rounded-lg shrink-0 border" style={{ background: 'var(--accent-subtle)', borderColor: 'var(--accent)', color: 'var(--accent)' }}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{f.title}</h4>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{f.description}</p>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
         {/* State Badges Strip */}
-        <div className="mt-12 text-center space-y-3">
-          <p className="text-xs uppercase font-bold tracking-widest text-slate-500">
-            OPERATING ACROSS ALL 8 NORTH EASTERN REGION STATES
+        <div className="mt-14 text-center space-y-3">
+          <p className="text-xs uppercase font-bold tracking-wider" style={{ color: 'var(--text-muted)' }}>
+            COVERAGE ACROSS ALL 8 NORTH EASTERN STATES
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {states.map((st) => (
               <span
                 key={st}
-                className="px-3 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300"
+                className="px-3 py-1 rounded-full border text-xs font-medium"
+                style={{
+                  background: 'var(--bg-subtle)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--text-secondary)'
+                }}
               >
                 {st}
               </span>
@@ -129,12 +208,21 @@ export function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="tactical-glass-header py-6 px-6 md:px-12 border-t border-slate-800 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>© 2026 NER Tactical Logistics & Emergency Command System (NER-LECS). Built for Smart India Hackathon.</p>
-        <div className="flex items-center gap-4 text-slate-400">
-          <span className="hover:text-sky-400 cursor-pointer" onClick={() => navigate('/login')}>Login</span>
+      <footer
+        className="py-6 px-6 md:px-12 border-t text-xs flex flex-col sm:flex-row items-center justify-between gap-3"
+        style={{
+          background: 'var(--bg-surface)',
+          borderColor: 'var(--border-subtle)',
+          color: 'var(--text-muted)'
+        }}
+      >
+        <p>© 2026 NIDAN Logistics & Emergency Command System. Smart India Hackathon Edition.</p>
+        <div className="flex items-center gap-4">
+          <span className="cursor-pointer hover:underline" onClick={() => navigate('/login')}>Login</span>
           <span>•</span>
-          <span className="hover:text-sky-400 cursor-pointer" onClick={() => navigate('/emergency')}>Emergency SitRep</span>
+          <span className="cursor-pointer hover:underline" onClick={() => navigate('/emergency')}>Emergency Console</span>
+          <span>•</span>
+          <span className="cursor-pointer hover:underline" onClick={() => navigate('/routes/planner')}>Route Planner</span>
         </div>
       </footer>
     </div>

@@ -7,35 +7,46 @@ export function Card({
   className = '',
   header,
   headerAction,
-  riskBorder = null, // 'safe' | 'warning' | 'danger' | null
+  title,
+  actionSlot,
+  footer,
+  onClick,
+  hoverable = false,
+  padding = true,
   ...props
 }) {
-  const riskClasses = {
-    safe: 'risk-glow-safe border-emerald-500/40',
-    warning: 'risk-glow-warning border-amber-500/40',
-    danger: 'risk-glow-danger border-red-500/40'
-  };
+  const isClickable = Boolean(onClick) || hoverable;
+  const headerContent = header || title;
+  const actionContent = headerAction || actionSlot;
 
   return (
     <div
+      onClick={onClick}
       className={twMerge(
         clsx(
-          'tactical-glass rounded-xl shadow-tactical-card transition-all duration-200',
-          riskBorder && riskClasses[riskBorder],
+          'bg-bg-elevated border border-border-subtle rounded-lg transition-all duration-150 overflow-hidden',
+          isClickable && 'cursor-pointer hover:border-border-strong hover:shadow-sm',
           className
         )
       )}
       {...props}
     >
-      {header && (
-        <div className="px-4 py-3.5 border-b border-slate-800/80 flex items-center justify-between">
-          <div className="font-semibold text-slate-100 text-sm tracking-wide flex items-center gap-2">
-            {header}
+      {headerContent && (
+        <div className="px-4 py-3 border-b border-border-subtle flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
+          <div className="font-semibold text-text-primary text-sm tracking-tight flex items-center gap-2 min-w-0">
+            {headerContent}
           </div>
-          {headerAction && <div>{headerAction}</div>}
+          {actionContent && <div className="flex items-center gap-2 flex-shrink-0 ml-auto">{actionContent}</div>}
         </div>
       )}
-      <div className="p-4">{children}</div>
+      <div className={clsx(padding ? 'p-4' : '')}>{children}</div>
+      {footer && (
+        <div className="px-4 py-2.5 border-t border-border-subtle bg-bg-subtle/50 rounded-b-lg flex items-center justify-between text-xs text-text-secondary">
+          {footer}
+        </div>
+      )}
     </div>
   );
 }
+
+export default Card;

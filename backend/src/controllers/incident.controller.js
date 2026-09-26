@@ -1,6 +1,7 @@
 const Incident = require('../models/Incident');
 const RoadSegment = require('../models/RoadSegment');
 const { classifyIncidentPhoto, translateAndSummarize } = require('../services/gemini.service');
+const { broadcastIncidentCreated, broadcastIncidentStatus } = require('../sockets/liveTracking.socket');
 
 // POST /api/v1/incidents (Idempotent upsert by clientUuid)
 async function submitIncident(req, res, next) {
@@ -17,6 +18,8 @@ async function submitIncident(req, res, next) {
       coordinates,
       photoBase64,
       photoUrl,
+      audioDataUrl,
+      audioDurationSec,
       capturedAt,
       originalLanguage = 'en'
     } = req.body;
@@ -46,7 +49,7 @@ async function submitIncident(req, res, next) {
       clientUuid: uuid,
       incidentType: aiClassification.incidentType || incidentType,
       severity: aiClassification.severity || Number(severity),
-      title: title || `${incidentType.replace('_', ' ').toUpperCase()} reported in ${districtName || 'NER sector'}`,
+      title: title || `${(aiClassification.incidentType || incidentType).replace('_', ' ').toUpperCase()} reported in ${districtName || 'NER sector'}`,
       description: description || 'Field agent hazard report submitted from mobile unit.',
       districtId: districtId || 'AS-KAM',
       districtName: districtName || 'Kamrup Metropolitan',
@@ -57,6 +60,8 @@ async function submitIncident(req, res, next) {
       },
       photoBase64: photoBase64 || null,
       photoUrl: photoUrl || null,
+      audioDataUrl: audioDataUrl || null,
+      audioDurationSec: audioDurationSec ? Number(audioDurationSec) : 0,
       reporterRole: req.user?.role || 'field_agent',
       reporterName: req.user?.name || 'Field Agent Mobile Unit',
       reporterPhone: req.user?.phone || '+91 94350 00000',
@@ -64,7 +69,7 @@ async function submitIncident(req, res, next) {
       receivedAt: new Date(),
       originalLanguage,
       aiClassification,
-      status: 'reported'
+      status: 'pending_verification'
     };
 
     // If high severity, update road segment status to blocked/degraded
@@ -81,6 +86,9 @@ async function submitIncident(req, res, next) {
       { $set: payload },
       { upsert: true, new: true }
     );
+
+    // Emit live WebSocket notification across command network
+    broadcastIncidentCreated(incident);
 
     res.status(201).json({
       success: true,
@@ -137,9 +145,12 @@ async function getIncidentById(req, res, next) {
 // PATCH /api/v1/incidents/:id/status
 async function updateIncidentStatus(req, res, next) {
   try {
-    const { status, resolutionNotes } = req.body;
+    const { status, resolutionNotes, rejectionReason, clarificationQuery } = req.body;
 
     const updateFields = { status };
+    if (rejectionReason) updateFields.rejectionReason = rejectionReason;
+    if (clarificationQuery) updateFields.clarificationQuery = clarificationQuery;
+
     if (status === 'resolved') {
       updateFields.resolvedAt = new Date();
       updateFields.resolutionNotes = resolutionNotes || 'Road cleared by Border Roads Organisation engineering team.';
@@ -161,7 +172,15 @@ async function updateIncidentStatus(req, res, next) {
         { segmentId: incident.roadSegmentId },
         { $set: { isBlocked: false, isDegraded: false, currentRiskScore: 35, riskBand: 'safe' } }
       );
+    } else if (status === 'verified' && incident.roadSegmentId && incident.severity >= 3) {
+      await RoadSegment.findOneAndUpdate(
+        { segmentId: incident.roadSegmentId },
+        { $set: { isBlocked: incident.severity >= 4, currentRiskScore: 90, riskBand: 'high' } }
+      );
     }
+
+    // Broadcast status change event via WebSocket to driver and command sessions
+    broadcastIncidentStatus(incident);
 
     res.status(200).json({
       success: true,
@@ -186,7 +205,6 @@ async function translateIncident(req, res, next) {
       return res.status(404).json({ success: false, error: 'Incident not found.' });
     }
 
-    // Check if translation already cached on incident
     if (incident.translations && incident.translations.get(targetLang)) {
       return res.status(200).json({
         success: true,

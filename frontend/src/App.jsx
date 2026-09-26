@@ -2,7 +2,9 @@ import React, { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppRoutes } from './routes/AppRoutes';
+import { ThemeProvider } from './features/ThemeContext';
 import { subscribeToLiveVehicles } from './services/socket';
+import { initGlobalTacticalSync } from './services/tacticalSync';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,18 +18,23 @@ const queryClient = new QueryClient({
 
 export function App() {
   useEffect(() => {
-    // Subscribe to real-time socket events
-    const unsubscribe = subscribeToLiveVehicles(queryClient);
+    // Subscribe to real-time socket & tactical broadcast events
+    const unsubSocket = subscribeToLiveVehicles(queryClient);
+    const unsubTactical = initGlobalTacticalSync(queryClient);
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubSocket) unsubSocket();
+      if (unsubTactical) unsubTactical();
     };
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

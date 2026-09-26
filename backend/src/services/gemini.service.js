@@ -220,7 +220,7 @@ Ground all statements strictly in the numbers above. Do not hallucinate fictitio
       `Sustained monsoon runoff threatens ${floodedCount > 0 ? floodedCount : 'multiple'} low-lying culverts; monitor continuous rainfall gauges.`
     ],
     recommendedActions: [
-      `Activate automated Dijkstra dynamic rerouting for all Tier-1 relief shipments avoiding flagged flood segments.`,
+      `Activate automated Dijkstra's dynamic rerouting for all Tier-1 relief shipments avoiding flagged flood segments.`,
       `Pre-position earthmoving recovery crews at critical junction nodes identified in this dataset import.`
     ]
   };

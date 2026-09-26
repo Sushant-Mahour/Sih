@@ -1,32 +1,22 @@
 const mongoose = require('mongoose');
 const config = require('./env');
 
-let memoryServer = null;
-
 async function connectDB() {
+  mongoose.set('strictQuery', false);
+  
+  // Use the connection string from .env or default to local mongodb
+  const uri = config.mongoUri || 'mongodb://127.0.0.1:27017/ner_logistics';
+
   try {
-    console.log(`[Database] Attempting connection to MongoDB at: ${config.mongoUri}`);
-    mongoose.set('strictQuery', false);
-    
-    // Try connecting to configured MongoDB instance with a short timeout
-    await mongoose.connect(config.mongoUri, {
-      serverSelectionTimeoutMS: 2500
+    console.log(`[Database] Attempting connection to local MongoDB at: ${uri}`);
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000 // Timeout after 5s instead of 30s
     });
-    console.log('[Database] Connected to external/local MongoDB successfully.');
+    console.log(`[Database] Connected to local MongoDB successfully at: ${uri}`);
   } catch (err) {
-    console.warn(`[Database] Could not connect to ${config.mongoUri}: ${err.message}`);
-    console.log('[Database] Initializing MongoMemoryServer in-memory fallback database...');
-    
-    try {
-      const { MongoMemoryServer } = require('mongodb-memory-server');
-      memoryServer = await MongoMemoryServer.create();
-      const memUri = memoryServer.getUri();
-      await mongoose.connect(memUri);
-      console.log(`[Database] In-memory MongoDB initialized and connected at: ${memUri}`);
-    } catch (memErr) {
-      console.error('[Database] Critical: Failed to start in-memory MongoDB fallback:', memErr);
-      throw memErr;
-    }
+    console.error(`[Database] Critical: Could not connect to local MongoDB at ${uri}. Please ensure MongoDB is installed and running on your PC.`);
+    console.error(`Error details: ${err.message}`);
+    process.exit(1); // Exit process with failure
   }
 
   mongoose.connection.on('error', (err) => {
@@ -36,9 +26,7 @@ async function connectDB() {
 
 async function closeDB() {
   await mongoose.disconnect();
-  if (memoryServer) {
-    await memoryServer.stop();
-  }
+  console.log('[Database] Disconnected from MongoDB');
 }
 
 module.exports = { connectDB, closeDB };
