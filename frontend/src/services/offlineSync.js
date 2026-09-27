@@ -5,7 +5,7 @@ const DB_NAME = 'ner_logistics_offline_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'pendingReports';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://sih-v23m.onrender.com/api/v1';
 
 let dbPromise = null;
 
