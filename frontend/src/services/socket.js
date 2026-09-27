@@ -1,7 +1,9 @@
 import { io } from 'socket.io-client';
 import { useNotificationStore } from '../features/useNotificationStore';
 
+
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'https://sih-v23m.onrender.com';
+
 
 let socketInstance = null;
 
